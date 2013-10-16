@@ -116,7 +116,7 @@ static int iCreatedTheTclInterpreter = 0;
 
 #ifdef USE_TCLPLUG
 
-MS_CVSID("$Id$")
+// MS_CVSID("$Id$")
 
 /*
 ** set_tcl_var_string - set a string into the global layer array

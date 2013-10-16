@@ -25,6 +25,8 @@ find_path(TCL_INCLUDE_PATH tcl.h HINTS ${TCL_INC})
 
 find_path(MAPSERVER_INCLUDE_PATH mapserver.h HINTS ${PROJECT_SOURCE_DIR})
 
+set_property(SOURCE maptclplug.c PROPERTY COMPILE_FLAGS "-DUSE_TCLPLUG")
+
 add_library(maptclplug SHARED maptclplug.c)
 
 find_library(MAPSERVER_LIBRARY names mapserver PATHS /usr/lib /usr/local/lib)
