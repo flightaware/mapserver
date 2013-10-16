@@ -134,11 +134,23 @@
     }
 #endif
 
+#if defined SWIGTCL8
+%{
+#include <tclgd.h>
+%}
+
+    int gdHandle (char *newCommandName)
+    {
+      return tclgd_newGDObjectAttach (SWIG_TCL_INTERP,
+                                      newCommandName,
+                                      (gdImagePtr) self->img.plugin);
+    }
+
+
     /* -----------------------------------------------------------------------
        saveToString is deprecated and no longer supported.  Users should use
        the write() method instead.
     ----------------------------------------------------------------------- */
-#if defined SWIGTCL8
 
     Tcl_Obj *saveToString() 
     {
@@ -150,24 +162,24 @@
 
 #if GD2_VERS > 1
         if(self->format->imagemode == MS_IMAGEMODE_RGBA) {
-            gdImageSaveAlpha(self->img.gd, 1);
+            gdImageSaveAlpha((gdImagePtr) self->img.plugin, 1);
         } else if (self->format->imagemode == MS_IMAGEMODE_RGB) {
-            gdImageSaveAlpha(self->img.gd, 0);
+            gdImageSaveAlpha((gdImagePtr) self->img.plugin, 0);
         }
 #endif 
 
         if(strcasecmp("ON", msGetOutputFormatOption(self->format, "INTERLACE", "ON" )) == 0) {
-            gdImageInterlace(self->img.gd, 1);
+            gdImageInterlace((gdImagePtr) self->img.plugin, 1);
         }
 
         if(self->format->transparent) {
-            gdImageColorTransparent(self->img.gd, 0);
+            gdImageColorTransparent((gdImagePtr) self->img.plugin, 0);
         }
 
         if(strcasecmp(self->format->driver, "gd/gif") == 0) {
 
 #ifdef USE_GD_GIF
-        imgbytes = gdImageGifPtr(self->img.gd, &size);
+        imgbytes = gdImageGifPtr((gdImagePtr) self->img.plugin, &size);
 #else
         msSetError(MS_MISCERR, "GIF output is not available.", "saveToString()");
         return(MS_FAILURE);
@@ -176,7 +188,7 @@
         } else if (strcasecmp(self->format->driver, "gd/png") == 0) {
 
 #ifdef USE_GD_PNG
-        imgbytes = gdImagePngPtr(self->img.gd, &size);
+        imgbytes = gdImagePngPtr((gdImagePtr) self->img.plugin, &size);
 #else
         msSetError(MS_MISCERR, "PNG output is not available.", "saveToString()");
         return(MS_FAILURE);
@@ -185,7 +197,7 @@
         } else if (strcasecmp(self->format->driver, "gd/jpeg") == 0) {
 
 #ifdef USE_GD_JPEG
-        imgbytes = gdImageJpegPtr(self->img.gd, &size, atoi(msGetOutputFormatOption(self->format, "QUALITY", "75" )));
+        imgbytes = gdImageJpegPtr((gdImagePtr) self->img.plugin, &size, atoi(msGetOutputFormatOption(self->format, "QUALITY", "75" )));
 #else
         msSetError(MS_MISCERR, "JPEG output is not available.", "saveToString()");
         return(MS_FAILURE);
@@ -194,7 +206,7 @@
         } else if (strcasecmp(self->format->driver, "gd/wbmp") == 0) {
 
 #ifdef USE_GD_WBMP
-            imgbytes = gdImageWBMPPtr(self->img.gd, &size, 1);
+            imgbytes = gdImageWBMPPtr((gdImagePtr) self->img.plugin, &size, 1);
 #else
             msSetError(MS_MISCERR, "WBMP output is not available.", "saveToString()");
             return(MS_FAILURE);

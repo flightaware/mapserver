@@ -1,0 +1,52 @@
+cmake_minimum_required(VERSION 2.8)
+LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake)
+find_package(SWIG REQUIRED)
+include(${SWIG_USE_FILE})
+find_package(TCL)
+
+find_package(GD)
+
+if(NOT GD_FOUND)
+#report_optional_not_found(GD)
+report_required_not_found(GD)
+else(NOT GD_FOUND)
+include_directories(${GD_INCLUDE_DIR})
+set (USE_GD 1)
+if(GD_SUPPORTS_PNG)
+  set(USE_GD_PNG 1)
+endif(GD_SUPPORTS_PNG)
+if(GD_SUPPORTS_GIF)
+  set(USE_GD_GIF 1)
+endif(GD_SUPPORTS_GIF)
+if(GD_SUPPORTS_JPEG)
+  set(USE_GD_JPEG 1)
+endif(GD_SUPPORTS_JPEG)
+if(GD_SUPPORTS_FREETYPE)
+  set(USE_GD_FREETYPE 1)
+endif(GD_SUPPORTS_FREETYPE)
+endif(NOT GD_FOUND)
+
+find_path(TCL_INCLUDE_PATH tcl.h
+  HINTS ${TCL_INC}
+)
+
+include_directories(${TCL_INCLUDE_PATH})
+include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}/build)
+include_directories(${PROJECT_SOURCE_DIR}/mapscript/swiginc)
+include_directories(${PROJECT_SOURCE_DIR}/mapscript/)
+include_directories(${PROJECT_SOURCE_DIR}/mapscript/tcl)
+swig_add_module(tclmapscript tcl mapscript.i)
+
+swig_link_libraries(tclmapscript ${TCL_LIBRARIES} ${MAPSERVER_LIBMAPSERVER})
+
+set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES PREFIX "")
+set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES OUTPUT_NAME _mapscript)
+
+get_target_property(LOC_MAPSCRIPT_LIB ${SWIG_MODULE_tclmapscript_REAL_NAME} LOCATION)
+set(mapscript_files ${LOC_MAPSCRIPT_LIB} ${CMAKE_CURRENT_BINARY_DIR}/mapscript.py)
+#install(FILES ${mapscript_files} DESTINATION ${TCL_SITE_PACKAGES})
+
+#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mapscript.py DESTINATION ${TCL_SITE_PACKAGES})
+#install(TARGETS mapscript DESTINATION ${TCL_SITE_PACKAGES})
+

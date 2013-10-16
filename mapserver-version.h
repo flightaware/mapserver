@@ -1,0 +1,1 @@
+build/mapserver-version.h
