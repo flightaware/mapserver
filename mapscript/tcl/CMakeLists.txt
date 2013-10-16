@@ -1,8 +1,23 @@
 cmake_minimum_required(VERSION 2.8)
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake)
+project(TCL_WRAP)
 find_package(SWIG REQUIRED)
 include(${SWIG_USE_FILE})
 find_package(TCL)
+
+LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake)
+
+#include(../../CMakeLists.txt)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${TCL_INCLUDE_PATH})
+include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}/build)
+include_directories(${PROJECT_SOURCE_DIR}/mapscript/swiginc)
+include_directories(${PROJECT_SOURCE_DIR}/mapscript/)
+include_directories(${PROJECT_SOURCE_DIR}/mapscript/tcl)
+
+set(CMAKE_SWIG_FLAGS "")
+
 
 find_package(GD)
 
@@ -30,21 +45,18 @@ find_path(TCL_INCLUDE_PATH tcl.h
   HINTS ${TCL_INC}
 )
 
-include_directories(${TCL_INCLUDE_PATH})
-include_directories(${PROJECT_SOURCE_DIR})
-include_directories(${PROJECT_SOURCE_DIR}/build)
-include_directories(${PROJECT_SOURCE_DIR}/mapscript/swiginc)
-include_directories(${PROJECT_SOURCE_DIR}/mapscript/)
-include_directories(${PROJECT_SOURCE_DIR}/mapscript/tcl)
-swig_add_module(tclmapscript tcl mapscript.i)
+find_library(MAPSERVER_LIBRARY names mapserver PATHS /usr/lib /usr/local/lib)
 
-swig_link_libraries(tclmapscript ${TCL_LIBRARIES} ${MAPSERVER_LIBMAPSERVER})
+SWIG_ADD_MODULE(tclmapscript tcl mapscript.i)
+
+SWIG_LINK_LIBRARIES(tclmapscript ${TCL_LIBRARY} ${MAPSERVER_LIBMAPSERVER} ${MAPSERVER_LIBRARY})
 
 set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES PREFIX "")
-set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES OUTPUT_NAME _mapscript)
+set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES OUTPUT_NAME mapscript)
 
 get_target_property(LOC_MAPSCRIPT_LIB ${SWIG_MODULE_tclmapscript_REAL_NAME} LOCATION)
-set(mapscript_files ${LOC_MAPSCRIPT_LIB} ${CMAKE_CURRENT_BINARY_DIR}/mapscript.py)
+set(mapscript_files ${LOC_MAPSCRIPT_LIB} ${CMAKE_CURRENT_SOURCE_DIR}/*.tcl)
+
 #install(FILES ${mapscript_files} DESTINATION ${TCL_SITE_PACKAGES})
 
 #install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mapscript.py DESTINATION ${TCL_SITE_PACKAGES})
