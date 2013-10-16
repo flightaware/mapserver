@@ -50,6 +50,8 @@ find_library(MAPSERVER_LIBRARY names mapserver PATHS /usr/lib /usr/local/lib)
 #find_library(TCLGD_LIBRARY names libtclgd PATHS /usr/local/lib/tclgd1.2)
 set(TCLGD_LIBRARY "/usr/local/lib/tclgd1.2/libtclgd.so.1")
 
+set (MAPSCRIPT_DEST "/usr/local/lib/MapscriptTcl1.4")
+
 SWIG_ADD_MODULE(tclmapscript tcl mapscript.i)
 
 SWIG_LINK_LIBRARIES(tclmapscript ${TCL_LIBRARY} ${MAPSERVER_LIBMAPSERVER} ${MAPSERVER_LIBRARY} ${TCLGD_LIBRARY})
@@ -63,5 +65,6 @@ set(mapscript_files ${LOC_MAPSCRIPT_LIB} ${CMAKE_CURRENT_SOURCE_DIR}/*.tcl)
 #install(FILES ${mapscript_files} DESTINATION ${TCL_SITE_PACKAGES})
 
 #install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mapscript.py DESTINATION ${TCL_SITE_PACKAGES})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mapscript.so ${CMAKE_CURRENT_SOURCE_DIR}/pkgIndex.tcl ${CMAKE_CURRENT_SOURCE_DIR}/mapscriptsupp.tcl DESTINATION ${MAPSCRIPT_DEST})
 #install(TARGETS mapscript DESTINATION ${TCL_SITE_PACKAGES})
 
