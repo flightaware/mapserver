@@ -47,9 +47,12 @@ find_path(TCL_INCLUDE_PATH tcl.h
 
 find_library(MAPSERVER_LIBRARY names mapserver PATHS /usr/lib /usr/local/lib)
 
+#find_library(TCLGD_LIBRARY names libtclgd PATHS /usr/local/lib/tclgd1.2)
+set(TCLGD_LIBRARY "/usr/local/lib/tclgd1.2/libtclgd.so.1")
+
 SWIG_ADD_MODULE(tclmapscript tcl mapscript.i)
 
-SWIG_LINK_LIBRARIES(tclmapscript ${TCL_LIBRARY} ${MAPSERVER_LIBMAPSERVER} ${MAPSERVER_LIBRARY})
+SWIG_LINK_LIBRARIES(tclmapscript ${TCL_LIBRARY} ${MAPSERVER_LIBMAPSERVER} ${MAPSERVER_LIBRARY} ${TCLGD_LIBRARY})
 
 set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES PREFIX "")
 set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES OUTPUT_NAME mapscript)
