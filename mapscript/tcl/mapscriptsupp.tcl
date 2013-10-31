@@ -32,7 +32,12 @@ if {![string length [info commands ::mapscript::ms_error]]} {
 namespace eval ::mapscript {
 
 proc _mapscript_init_ {} {
+    # create a reverse lookup for error codes to error #define names
+    foreach msErrCode [namespace eval ::mapscript {info vars MS_*ERR}] {
+	set ::mapscript::errorNumbersToCodes([set ::mapscript::$msErrCode]) $msErrCode
+    }
 
+    # create a handler proc for all the mapscript object types
     set code {
         proc OBJECTRef {ptr method args} {
 	    # check ptr for correct object type
