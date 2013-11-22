@@ -38,6 +38,7 @@
 #include <unistd.h>
 #endif
 #include <stdarg.h>
+#include <syslog.h>
 
 
 
@@ -332,6 +333,7 @@ void msSetError(int code, const char *message_fmt, const char *routine, ...)
   /* Log a copy of errors to MS_ERRORFILE if set (handled automatically inside msDebug()) */
   msDebug("%s: %s %s\n", ms_error->routine, ms_errorCodes[ms_error->code], ms_error->message);
 
+  syslog (LOG_DEBUG, "msSetError: code '%s', routine '%s', message '%s'", ms_errorCodes[ms_error->code], ms_error->routine, ms_error->message);
 }
 
 void msWriteError(FILE *stream)
