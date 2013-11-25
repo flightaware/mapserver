@@ -45,12 +45,13 @@ find_path(TCL_INCLUDE_PATH tcl.h
 
 find_library(MAPSERVER_LIBRARY names mapserver PATHS /usr/lib /usr/local/lib)
 
+find_library(TCLGD_LIBRARY names tclgd PATHS /usr/local/lib/tclgd1.2)
+#set(TCLGD_LIBRARY "/usr/local/lib/tclgd1.2/libtclgd.so.1")
+
 # we want our mapscript commands in a namespace, not massively polluting
 # the global namespace
 set_property(SOURCE mapscript.i PROPERTY SWIG_FLAGS "-namespace")
 
-#find_library(TCLGD_LIBRARY names libtclgd PATHS /usr/local/lib/tclgd1.2)
-set(TCLGD_LIBRARY "/usr/local/lib/tclgd1.2/libtclgd.so.1")
 
 set (MAPSCRIPT_DEST "/usr/local/lib/MapscriptTcl1.4")
 
