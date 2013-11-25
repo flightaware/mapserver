@@ -29,4 +29,8 @@ static char interpString[32];
   /* save Tcl interp pointer to be used in getImageToVar() */
   SWIG_TCL_INTERP = interp;
 #endif /* USE_TCL_STUBS */
+
+  if (msSetup() != MS_SUCCESS) {
+    msSetError(MS_MISCERR, "failed to set up threads and font cache", "msSetup()");
+  }
 %}
