@@ -1169,7 +1169,7 @@ Tcl_Obj *msTclPlugLayerItemNamesToList(layerObj *layer) {
 **
 ** Registered vtable->LayerWhichShapes function.
 */
-int msTclPlugLayerWhichShapes(layerObj *layer, rectObj rect) {
+int msTclPlugLayerWhichShapes(layerObj *layer, rectObj rect, int isQuery) {
 #ifdef USE_TCLPLUG
     msTclPlugLayerInfo *layerinfo = NULL;
     int tclResult;
@@ -1319,20 +1319,22 @@ int msTclPlugLayerNextShape(layerObj *layer, shapeObj *shape) {
 /*
 ** msTclPlugLayerGetShape()
 **
-** Registered vtable->LayerGetShape function. We ignore the 'tile' 
-** parameter, as it means nothing to us.
+** Registered vtable->LayerGetShape function.
 */
-int msTclPlugLayerGetShape(layerObj *layer, shapeObj *shape, int tile, long record) {
+int msTclPlugLayerGetShape(layerObj *layer, shapeObj *shape, resultObj *record) {
 #ifdef USE_TCLPLUG
     msTclPlugLayerInfo *layerinfo;
     int result, num_tuples;
     Tcl_Interp *interp;
 
+    long shapeindex = record->shapeindex;
+    int resultindex = record->resultindex;
+
     assert(layer != NULL);
     assert(layer->layerinfo != NULL);
 
     if (layer->debug) {
-        msDebug("msTclPlugLayerGetShape called for record = %i\n", record);
+        msDebug("msTclPlugLayerGetShape called for record = %i\n", resultindex);
     }
 
     /* 
@@ -1344,7 +1346,7 @@ int msTclPlugLayerGetShape(layerObj *layer, shapeObj *shape, int tile, long reco
     assert (layerinfo->interp);
     interp = layerinfo->interp;
 
-    msTclPlugSnagRectangleAndUID(layer, 0, &record);
+    msTclPlugSnagRectangleAndUID(layer, 0, &shapeindex);
 
     Tcl_IncrRefCount (layerinfo->getShapeCommandObj);
     /* now invoke the call to get the list of available items */
