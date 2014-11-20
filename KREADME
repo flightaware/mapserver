@@ -1,0 +1,8 @@
+
+
+building current 6.4 branch FA debug...
+
+
+cmake -DWITH_GD=1 -DWITH_CURL=1 -DCMAKE_BUILD_TYPE=Debug ..
+
+cmake -DWITH_GD=1 -DUSE_THREAD -DWITH_CURL=1 -DCMAKE_BUILD_TYPE=Debug ..

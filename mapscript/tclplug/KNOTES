@@ -1,0 +1,5 @@
+
+
+cmake -DTCL_INCLUDE_PATH=/usr/local/include/tcl8.6 -DTCL_LIBRARY=/usr/local/lib/libtcl86.so ..
+
+
