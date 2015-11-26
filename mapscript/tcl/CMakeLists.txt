@@ -62,7 +62,7 @@ SWIG_LINK_LIBRARIES(tclmapscript ${TCL_LIBRARY} ${MAPSERVER_LIBMAPSERVER} ${MAPS
 set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES PREFIX "")
 set_target_properties(${SWIG_MODULE_tclmapscript_REAL_NAME} PROPERTIES OUTPUT_NAME mapscript)
 
-get_target_property(LOC_MAPSCRIPT_LIB ${SWIG_MODULE_tclmapscript_REAL_NAME} LOCATION)
+get_target_property(LOC_MAPSCRIPT_LIB ${SWIG_MODULE_tclmapscript_REAL_NAME} $<TARGET_FILE>)
 set(mapscript_files ${LOC_MAPSCRIPT_LIB} ${CMAKE_CURRENT_SOURCE_DIR}/*.tcl)
 
 #install(FILES ${mapscript_files} DESTINATION ${TCL_SITE_PACKAGES})

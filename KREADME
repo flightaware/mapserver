@@ -6,3 +6,13 @@ building current 6.4 branch FA debug...
 cmake -DWITH_GD=1 -DWITH_CURL=1 -DCMAKE_BUILD_TYPE=Debug ..
 
 cmake -DWITH_GD=1 -DUSE_THREAD -DWITH_CURL=1 -DCMAKE_BUILD_TYPE=Debug ..
+
+cmake -DWITH_GD=1 -DUSE_THREAD=1 -DWITH_ICONV=0 -DWITH_FCGI=0 -DWITH_CAIRO=0 -DWITH_CURL=1 -DCMAKE_BUILD_TYPE=Debug ..
+
+
+create a symlink
+
+cd /sur/local/lib/tclgd1.2
+sudo ln -s libgtclgd.so.1 libtclgd.so
+
+
