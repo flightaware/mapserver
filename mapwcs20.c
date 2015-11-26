@@ -1109,7 +1109,7 @@ static int msWCSValidateAndFindAxes20(
   static const int numAxis = 2;
   char *validXAxisNames[] = {"x", "xaxis", "x-axis", "x_axis", "long", "long_axis", "long-axis", "lon", "lon_axis", "lon-axis", NULL};
   char *validYAxisNames[] = {"y", "yaxis", "y-axis", "y_axis", "lat", "lat_axis", "lat-axis", NULL};
-  char **validAxisNames[2]; 
+  char **validAxisNames[2];
   int iParamAxis, iAcceptedAxis, iName, i;
 
   validAxisNames[0] = validXAxisNames;
@@ -1580,7 +1580,7 @@ static int msWCSWriteDocument20(mapObj* map, xmlDocPtr psDoc)
   xmlChar *buffer = NULL;
   int size = 0;
   msIOContext *context = NULL;
-  const char *contenttype = NULL;
+  char *contenttype = NULL;
 
   const char *encoding = msOWSLookupMetadata(&(map->web.metadata), "CO", "encoding");
 
@@ -1598,6 +1598,7 @@ static int msWCSWriteDocument20(mapObj* map, xmlDocPtr psDoc)
   else
     msIO_setHeader("Content-Type","%s", contenttype);
   msIO_sendHeaders();
+  msFree(contenttype);
 
   context = msIO_getHandler(stdout);
 
@@ -1641,7 +1642,7 @@ static int msWCSWriteFile20(mapObj* map, imageObj* image, wcs20ParamsObjPtr para
                   "Failed to find %s driver.",
                   "msWCSWriteFile20()",
                   image->format->driver+5 );
-      return msWCSException(map, "mapserv", "NoApplicableCode",
+      return msWCSException(map, "NoApplicableCode", "mapserv",
                             params->version);
     }
 
@@ -1665,7 +1666,7 @@ static int msWCSWriteFile20(mapObj* map, imageObj* image, wcs20ParamsObjPtr para
       if( status != MS_SUCCESS ) {
         msSetError(MS_MISCERR, "msSaveImage() failed",
                    "msWCSWriteFile20()");
-        return msWCSException20(map, "mapserv", "NoApplicableCode",
+        return msWCSException20(map, "NoApplicableCode", "mapserv",
                                 params->version);
       }
     }
@@ -1715,7 +1716,7 @@ static int msWCSWriteFile20(mapObj* map, imageObj* image, wcs20ParamsObjPtr para
     status = msSaveImage(map, image, NULL);
     if( status != MS_SUCCESS ) {
       msSetError( MS_MISCERR, "msSaveImage() failed", "msWCSWriteFile20()");
-      return msWCSException(map, "mapserv", "NoApplicableCode", params->version);
+      return msWCSException(map, "NoApplicableCode", "mapserv", params->version);
     }
     if(multipart)
       msIO_fprintf( stdout, "\r\n--wcs--\r\n" );
@@ -2622,15 +2623,15 @@ int msWCSGetCapabilities20(mapObj *map, cgiRequestObj *req,
       msSetError(MS_WCSERR, "UPDATESEQUENCE parameter (%s) is equal to server (%s)",
                  "msWCSGetCapabilities20()", params->updatesequence, updatesequence);
       xmlFreeDoc(psDoc);
-      return msWCSException(map, "updatesequence",
-                            "CurrentUpdateSequence", params->version);
+      return msWCSException(map, "CurrentUpdateSequence", "updatesequence",
+                            params->version);
     }
     if (i > 0) { /* invalid */
       msSetError(MS_WCSERR, "UPDATESEQUENCE parameter (%s) is higher than server (%s)",
                  "msWCSGetCapabilities20()", params->updatesequence, updatesequence);
       xmlFreeDoc(psDoc);
-      return msWCSException(map, "updatesequence",
-                            "InvalidUpdateSequence", params->version);
+      return msWCSException(map, "InvalidUpdateSequence", "updatesequence",
+                            params->version);
     }
   }
   if(updatesequence != NULL) {
@@ -2660,7 +2661,7 @@ int msWCSGetCapabilities20(mapObj *map, cgiRequestObj *req,
         || (script_url_encoded = msEncodeHTMLEntities(script_url)) == NULL) {
       xmlFreeDoc(psDoc);
       msSetError(MS_WCSERR, "Server URL not found", "msWCSGetCapabilities20()");
-      return msWCSException(map, "mapserv", "NoApplicableCode", params->version);
+      return msWCSException(map, "NoApplicableCode", "mapserv", params->version);
     }
     free(script_url);
 
@@ -2714,6 +2715,9 @@ int msWCSGetCapabilities20(mapObj *map, cgiRequestObj *req,
   if ( MS_WCS_20_CAPABILITIES_INCLUDE_SECTION(params, "ServiceMetadata") ) {
     psNode = xmlNewChild(psRootNode, psWcsNs, BAD_CAST "ServiceMetadata", NULL);
 
+    /* Apply default formats */
+    msApplyDefaultOutputFormats(map);
+
     /* Add formats list */
     format_list = msWCSGetFormatsList20(map, NULL);
     msLibXml2GenerateList(psNode, psWcsNs, "formatSupported", format_list, ',');
@@ -2746,7 +2750,7 @@ int msWCSGetCapabilities20(mapObj *map, cgiRequestObj *req,
         if(status != MS_SUCCESS) {
           xmlFreeDoc(psDoc);
           xmlCleanupParser();
-          return msWCSException(map, "mapserv", "Internal", params->version);
+          return msWCSException(map, "Internal", "mapserv", params->version);
         }
       }
     }
@@ -2982,7 +2986,7 @@ int msWCSDescribeCoverage20(mapObj *map, wcs20ParamsObjPtr params, owsRequestObj
 static int msWCSGetCoverage20_FinalizeParamsObj(wcs20ParamsObjPtr params, wcs20AxisObjPtr *axes)
 {
   char *crs = NULL;
-  
+
   if (axes[0] != NULL) {
     if(axes[0]->subset != NULL) {
       msDebug("Subset for X-axis found: %s\n", axes[0]->subset->axis);
@@ -3538,7 +3542,10 @@ this request. Check wcs/ows_enable_request settings.", "msWCSGetCoverage20()", p
     if(maskLayerIdx == -1) {
       msSetError(MS_MISCERR, "Layer (%s) references unknown mask layer (%s)", "msDrawLayer()",
                  layer->name,layer->mask);
-      return (MS_FAILURE);
+      msFreeImage(image);
+      msFree(bandlist);
+      msWCSClearCoverageMetadata20(&cm);
+      return msWCSException(map, NULL, NULL, params->version);
     }
     maskLayer = GET_LAYER(map, maskLayerIdx);
     if(!maskLayer->maskimage) {
@@ -3552,7 +3559,10 @@ this request. Check wcs/ows_enable_request settings.", "msWCSGetCoverage20()", p
                                           image->imagepath, image->imageurl, map->resolution, map->defresolution, NULL);
       if (!maskLayer->maskimage) {
         msSetError(MS_MISCERR, "Unable to initialize mask image.", "msDrawLayer()");
-        return (MS_FAILURE);
+        msFreeImage(image);
+        msFree(bandlist);
+        msWCSClearCoverageMetadata20(&cm);
+        return msWCSException(map, NULL, NULL, params->version);
       }
 
       /*
@@ -3570,7 +3580,11 @@ this request. Check wcs/ows_enable_request settings.", "msWCSGetCoverage20()", p
       maskLayer->status = origstatus;
       maskLayer->labelcache = origlabelcache;
       if(retcode != MS_SUCCESS) {
-        return MS_FAILURE;
+        free(origImageType);
+        msFreeImage(image);
+        msFree(bandlist);
+        msWCSClearCoverageMetadata20(&cm);
+        return msWCSException(map, NULL, NULL, params->version);
       }
       /*
        * hack to work around bug #3834: if we have use an alternate renderer, the symbolset may contain
@@ -3590,7 +3604,7 @@ this request. Check wcs/ows_enable_request settings.", "msWCSGetCoverage20()", p
       /* set the imagetype from the original outputformat back (it was removed by msSelectOutputFormat() */
       msFree(map->imagetype);
       map->imagetype = origImageType;
-      
+
     }
   }
 

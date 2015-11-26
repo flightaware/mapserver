@@ -220,7 +220,7 @@ int msDrawLegendIcon(mapObj *map, layerObj *lp, classObj *theclass,
           imgStyle.maxsize = imgStyle.size;
 
         imgStyle.symbol = symbolNum;
-        msDrawMarkerSymbol(&map->symbolset,image_draw,&marker,&imgStyle,lp->scalefactor * image_draw->resolutionfactor);
+        msDrawMarkerSymbol(&map->symbolset,image_draw,&marker,&imgStyle,1.0);
         /* TO DO: we may want to handle this differently depending on the relative size of the keyimage */
       } else {
         for(i=0; i<theclass->numstyles; i++) {
@@ -677,8 +677,16 @@ imageObj *msDrawLegend(mapObj *map, int scale_independent, map_hittest *hittest)
     if(hittest) {
       ch = &hittest->layerhits[cur->layerindex].classhits[cur->classindex];
     }
-    if(msDrawLegendIcon(map, map->layers[cur->layerindex], map->layers[cur->layerindex]->class[cur->classindex],  map->legend.keysizex,  map->legend.keysizey, image, HMARGIN, (int) pnt.y, scale_independent, ch) != MS_SUCCESS)
-      return NULL;
+    if(msDrawLegendIcon(map, map->layers[cur->layerindex], map->layers[cur->layerindex]->class[cur->classindex],  map->legend.keysizex,  map->legend.keysizey, image, HMARGIN, (int) pnt.y, scale_independent, ch) != MS_SUCCESS) {
+      while(cur) {
+        /* clean up */
+        free(cur->transformedText);
+        head = cur;
+        cur = cur->pred;
+        free(head);
+        return NULL;
+      }
+    }
 
     /*
      * adjust the baseline for multiline truetype labels. the label point is the bottom left
@@ -747,7 +755,10 @@ int msEmbedLegend(mapObj *map, imageObj *img)
 
   /* render the legend. */
   image = msDrawLegend(map, MS_FALSE, NULL);
-  if( image == NULL ) return -1;
+  if( image == NULL ) {
+    msFree(imageType);
+    return -1;
+  }
 
   if (imageType) {
     map->outputformat = msSelectOutputFormat( map, imageType ); /* restore format */

@@ -536,6 +536,12 @@ int msOGRWriteFromQuery( mapObj *map, outputFormatObj *format, int sendheaders )
   /*      Determine the output datasource name to use.                    */
   /* ==================================================================== */
   storage = msGetOutputFormatOption( format, "STORAGE", "filesystem" );
+  if( EQUAL(storage,"stream") && !msIO_isStdContext() ) {
+    /* bug #4858, streaming output won't work if standard output has been
+     * redirected, we switch to memory output in this case
+     */
+    storage = "memory";
+  }
 
   /* -------------------------------------------------------------------- */
   /*      Where are we putting stuff?                                     */
@@ -804,6 +810,7 @@ int msOGRWriteFromQuery( mapObj *map, outputFormatObj *format, int sendheaders )
         if(status != MS_SUCCESS) {
           OGR_DS_Destroy( hDS );
           msOGRCleanupDS( datasource_name );
+          msGMLFreeItems(item_list);
           return status;
         }
       }
@@ -825,6 +832,8 @@ int msOGRWriteFromQuery( mapObj *map, outputFormatObj *format, int sendheaders )
       if(status != MS_SUCCESS) {
         OGR_DS_Destroy( hDS );
         msOGRCleanupDS( datasource_name );
+        msGMLFreeItems(item_list);
+        msFreeShape(&resultshape);
         return status;
       }
 
@@ -874,6 +883,8 @@ int msOGRWriteFromQuery( mapObj *map, outputFormatObj *format, int sendheaders )
       if(status != MS_SUCCESS) {
         OGR_DS_Destroy( hDS );
         msOGRCleanupDS( datasource_name );
+        msGMLFreeItems(item_list);
+        msFreeShape(&resultshape);
         return status;
       }
     }
@@ -901,7 +912,7 @@ int msOGRWriteFromQuery( mapObj *map, outputFormatObj *format, int sendheaders )
   } else {
     char datasource_path[MS_MAXPATHLEN];
 
-    strcpy( datasource_path, CPLGetPath( datasource_name ) );
+    strncpy( datasource_path, CPLGetPath( datasource_name ), MS_MAXPATHLEN-1 );
     file_list = msOGRRecursiveFileList( datasource_path );
   }
 

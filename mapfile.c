@@ -137,10 +137,9 @@ void msFree(void *p)
 void msFreeCharArray(char **array, int num_items)
 {
   int i;
-
+  if(!array) return;
   for(i=0; i<num_items; i++)
     msFree(array[i]);
-
   msFree(array);
 }
 
@@ -552,32 +551,38 @@ static void writeCharacter(FILE *stream, int indent, const char *name, const cha
   msIO_fprintf(stream, "%s '%c'\n", name, character);
 }
 
+static void writeStringElement(FILE *stream, char *string)
+{
+    char *string_escaped;
+
+    if(strchr(string,'\\')) {
+      string_escaped = msStrdup(string);
+      string_escaped = msReplaceSubstring(string_escaped,"\\","\\\\");
+    } else {
+      string_escaped = string;
+    }
+    if ( (strchr(string_escaped, '\'') == NULL) && (strchr(string_escaped, '\"') == NULL))
+      msIO_fprintf(stream, "\"%s\"", string_escaped);
+    else if ( (strchr(string_escaped, '\"') != NULL) && (strchr(string_escaped, '\'') == NULL))
+      msIO_fprintf(stream, "'%s'", string_escaped);
+    else if ( (strchr(string_escaped, '\'') != NULL) && (strchr(string_escaped, '\"') == NULL))
+      msIO_fprintf(stream, "\"%s\"", string_escaped);
+    else {
+      char *string_tmp = msStringEscape(string_escaped);
+      msIO_fprintf(stream, "\"%s\"", string_tmp);
+      if(string_escaped!=string_tmp) free(string_tmp);
+    }
+    if(string_escaped!=string) free(string_escaped);
+}
+
 static void writeString(FILE *stream, int indent, const char *name, const char *defaultString, char *string)
 {
-  char *string_escaped;
-
   if(!string) return;
   if(defaultString && strcmp(string, defaultString) == 0) return;
   writeIndent(stream, ++indent);
   if(name) msIO_fprintf(stream, "%s ", name);
-  if(strchr(string,'\\')) {
-    string_escaped = msStrdup(string);
-    string_escaped = msReplaceSubstring(string_escaped,"\\","\\\\");
-  } else {
-    string_escaped = string;
-  }
-  if ( (strchr(string_escaped, '\'') == NULL) && (strchr(string_escaped, '\"') == NULL))
-    msIO_fprintf(stream, "\"%s\"\n", string_escaped);
-  else if ( (strchr(string_escaped, '\"') != NULL) && (strchr(string_escaped, '\'') == NULL))
-    msIO_fprintf(stream, "'%s'\n", string_escaped);
-  else if ( (strchr(string_escaped, '\'') != NULL) && (strchr(string_escaped, '\"') == NULL))
-    msIO_fprintf(stream, "\"%s\"\n", string_escaped);
-  else {
-    char *string_tmp = msStringEscape(string_escaped);
-    msIO_fprintf(stream, "\"%s\"\n", string_tmp);
-    if(string_escaped!=string_tmp) free(string_tmp);
-  }
-  if(string_escaped!=string) free(string_escaped);
+  writeStringElement(stream, string);
+  writeLineFeed(stream);
 }
 
 static void writeNumberOrString(FILE *stream, int indent, const char *name, double defaultNumber, double number, char *string)
@@ -613,33 +618,13 @@ static void writeNumberOrKeyword(FILE *stream, int indent, const char *name, dou
 
 static void writeNameValuePair(FILE *stream, int indent, const char *name, const char *value)
 {
-  char *string_tmp;
   if(!name || !value) return;
   writeIndent(stream, ++indent);
 
-  if ( (strchr(name, '\'') == NULL) && (strchr(name, '\"') == NULL))
-    msIO_fprintf(stream, "\"%s\"\t", name);
-  else if ( (strchr(name, '\"') != NULL) && (strchr(name, '\'') == NULL))
-    msIO_fprintf(stream, "'%s'\t", name);
-  else if ( (strchr(name, '\'') != NULL) && (strchr(name, '\"') == NULL))
-    msIO_fprintf(stream, "\"%s\"\t", name);
-  else {
-    string_tmp = msStringEscape(name);
-    msIO_fprintf(stream, "\"%s\"\t", string_tmp);
-    if(name!=string_tmp) free(string_tmp);
-  }
-
-  if ( (strchr(value, '\'') == NULL) && (strchr(value, '\"') == NULL))
-    msIO_fprintf(stream, "\"%s\"\n", value);
-  else if ( (strchr(value, '\"') != NULL) && (strchr(value, '\'') == NULL))
-    msIO_fprintf(stream, "'%s'\n", value);
-  else if ( (strchr(value, '\'') != NULL) && (strchr(value, '\"') == NULL))
-    msIO_fprintf(stream, "\"%s\"\n", value);
-  else {
-    string_tmp = msStringEscape(value);
-    msIO_fprintf(stream, "\"%s\"\n", string_tmp);
-    if(value!=string_tmp) free(string_tmp);
-  }
+  writeStringElement(stream, (char*)name);
+  msIO_fprintf(stream,"\t");
+  writeStringElement(stream, (char*)value);
+  writeLineFeed(stream);
 }
 
 static void writeAttributeBinding(FILE *stream, int indent, const char *name, attributeBindingObj *binding)
@@ -665,9 +650,9 @@ static void writeColor(FILE *stream, int indent, const char *name, colorObj *def
     sprintf(buffer+4, "%02x", color->blue);
     sprintf(buffer+6, "%02x", color->alpha);
     *(buffer+8) = 0;
-    fprintf(stream, "%s \"#%s\"\n", name, buffer);
+    msIO_fprintf(stream, "%s \"#%s\"\n", name, buffer);
   } else {
-    fprintf(stream, "%s %d %d %d\n", name, color->red, color->green, color->blue);
+    msIO_fprintf(stream, "%s %d %d %d\n", name, color->red, color->green, color->blue);
   }
 #endif
 }
@@ -824,11 +809,13 @@ featureListNodeObjPtr insertFeatureList(featureListNodeObjPtr *list, shapeObj *s
 {
   featureListNodeObjPtr node;
 
-  node = (featureListNodeObjPtr) malloc(sizeof(featureListNodeObj));
-  MS_CHECK_ALLOC(node, sizeof(featureListNodeObj), NULL);
+  node = (featureListNodeObjPtr) msSmallMalloc(sizeof(featureListNodeObj));
 
   msInitShape(&(node->shape));
-  if(msCopyShape(shape, &(node->shape)) == -1) return(NULL);
+  if(msCopyShape(shape, &(node->shape)) == -1) {
+    msFree(node);
+    return(NULL);
+  }
 
   /* AJS - alans@wunderground.com O(n^2) -> O(n) conversion, keep a pointer to the end */
 
@@ -903,7 +890,6 @@ static int loadFeature(layerObj *player, int type)
 {
   int status=MS_SUCCESS;
   featureListNodeObjPtr *list = &(player->features);
-  featureListNodeObjPtr node;
   multipointObj points= {0,NULL};
   shapeObj *shape=NULL;
 
@@ -917,13 +903,15 @@ static int loadFeature(layerObj *player, int type)
     switch(msyylex()) {
       case(EOF):
         msSetError(MS_EOFERR, NULL, "loadFeature()");
+        msFreeShape(shape); /* clean up */
+        msFree(shape);
         return(MS_FAILURE);
       case(END):
         if(player->features != NULL && player->features->tailifhead != NULL)
           shape->index = player->features->tailifhead->shape.index + 1;
         else
           shape->index = 0;
-        if((node = insertFeatureList(list, shape)) == NULL)
+        if(insertFeatureList(list, shape) == NULL)
           status = MS_FAILURE;
 
         msFreeShape(shape); /* clean up */
@@ -933,17 +921,29 @@ static int loadFeature(layerObj *player, int type)
       case(FEATURE):
         break; /* for string loads */
       case(POINTS):
-        if(loadFeaturePoints(&points) == MS_FAILURE) return(MS_FAILURE); /* no clean up necessary, just return */
+        if(loadFeaturePoints(&points) == MS_FAILURE) {
+          msFreeShape(shape); /* clean up */
+          msFree(shape);
+          return(MS_FAILURE);
+        }
         status = msAddLine(shape, &points);
 
         msFree(points.point); /* clean up */
         points.numpoints = 0;
 
-        if(status == MS_FAILURE) return(MS_FAILURE);
+        if(status == MS_FAILURE) {
+          msFreeShape(shape); /* clean up */
+          msFree(shape);
+          return(MS_FAILURE);
+        }
         break;
       case(ITEMS): {
         char *string=NULL;
-        if(getString(&string) == MS_FAILURE) return(MS_FAILURE);
+        if(getString(&string) == MS_FAILURE) {
+          msFreeShape(shape); /* clean up */
+          msFree(shape);
+          return(MS_FAILURE);
+        }
         if (string) {
           if(shape->values) msFreeCharArray(shape->values, shape->numvalues);
           shape->values = msStringSplit(string, ';', &shape->numvalues);
@@ -952,26 +952,37 @@ static int loadFeature(layerObj *player, int type)
         break;
       }
       case(TEXT):
-        if(getString(&shape->text) == MS_FAILURE) return(MS_FAILURE);
+        if(getString(&shape->text) == MS_FAILURE) {
+          msFreeShape(shape); /* clean up */
+          msFree(shape);
+          return(MS_FAILURE);
+        }
         break;
       case(WKT): {
         char *string=NULL;
 
         /* todo, what do we do with multiple WKT property occurances? */
 
-        if(getString(&string) == MS_FAILURE) return(MS_FAILURE);
         msFreeShape(shape);
         msFree(shape);
+        if(getString(&string) == MS_FAILURE) return(MS_FAILURE);
+        
         if((shape = msShapeFromWKT(string)) == NULL)
           status = MS_FAILURE;
 
         msFree(string); /* clean up */
 
-        if(status == MS_FAILURE) return(MS_FAILURE);
+        if(status == MS_FAILURE) {
+          msFreeShape(shape); /* clean up */
+          msFree(shape);
+          return(MS_FAILURE);
+        }
         break;
       }
       default:
         msSetError(MS_IDENTERR, "Parsing error near (%s):(line %d)", "loadfeature()", msyystring_buffer, msyylineno);
+        msFreeShape(shape); /* clean up */
+        msFree(shape);
         return(MS_FAILURE);
     }
   } /* next token */
@@ -1383,7 +1394,8 @@ static int loadProjection(projectionObj *p)
 int msLoadProjectionStringEPSG(projectionObj *p, const char *value)
 {
 #ifdef USE_PROJ
-  if(p) msFreeProjection(p);
+  assert(p);
+  msFreeProjection(p);
 
   p->gt.need_geotransform = MS_FALSE;
 #ifdef USE_PROJ_FASTPATHS
@@ -1429,10 +1441,11 @@ int msLoadProjectionStringEPSG(projectionObj *p, const char *value)
 
 int msLoadProjectionString(projectionObj *p, const char *value)
 {
+  assert(p);
   p->gt.need_geotransform = MS_FALSE;
 
 #ifdef USE_PROJ
-  if(p) msFreeProjection(p);
+  msFreeProjection(p);
 
 
   /*
@@ -2428,7 +2441,6 @@ char *msGetExpressionString(expressionObj *exp)
 
 static void writeExpression(FILE *stream, int indent, const char *name, expressionObj *exp)
 {
-  char *string_tmp;
   if(!exp || !exp->string) return;
 
   writeIndent(stream, ++indent);
@@ -2440,17 +2452,8 @@ static void writeExpression(FILE *stream, int indent, const char *name, expressi
       msIO_fprintf(stream, "%s /%s/", name, exp->string);
       break;
     case(MS_STRING):
-      if ( (strchr(exp->string, '\'') == NULL) && (strchr(exp->string, '\"') == NULL))
-        msIO_fprintf(stream, "%s \"%s\"", name, exp->string);
-      else if ( (strchr(exp->string, '\"') != NULL) && (strchr(exp->string, '\'') == NULL))
-        msIO_fprintf(stream, "%s \'%s\'", name, exp->string);
-      else if ( (strchr(exp->string, '\'') != NULL) && (strchr(exp->string, '\"') == NULL))
-        msIO_fprintf(stream, "%s \"%s\"", name, exp->string);
-      else {
-        string_tmp = msStringEscape(exp->string);
-        msIO_fprintf(stream, "%s \"%s\"", name, string_tmp);
-        if(exp->string!=string_tmp) free(string_tmp);
-      }
+      msIO_fprintf(stream, "%s ", name);
+      writeStringElement(stream, exp->string);
       break;
     case(MS_EXPRESSION):
       msIO_fprintf(stream, "%s (%s)", name, exp->string);
@@ -2464,8 +2467,7 @@ static void writeExpression(FILE *stream, int indent, const char *name, expressi
 int loadHashTable(hashTableObj *ptable)
 {
   char *key=NULL, *data=NULL;
-
-  if (!ptable) ptable = msCreateHashTable();
+  assert(ptable);
 
   for(;;) {
     switch(msyylex()) {
@@ -2524,7 +2526,11 @@ static void writeHashTableInline(FILE *stream, int indent, char *name, hashTable
     if (table->items[i] != NULL) {
       for (tp=table->items[i]; tp!=NULL; tp=tp->next) {
         writeIndent(stream, indent);
-        msIO_fprintf(stream, "%s \"%s\" \"%s\"\n", name, tp->key, tp->data);
+        msIO_fprintf(stream, "%s ", name);
+        writeStringElement(stream, tp->key);
+        msIO_fprintf(stream," ");
+        writeStringElement(stream, tp->data);
+        writeLineFeed(stream);
       }
     }
   }
@@ -3398,7 +3404,7 @@ void resetClassStyle(classObj *class)
 
   /* reset labels */
   for(i=0; i<class->numlabels; i++) {
-    if(class->styles[i] != NULL) {
+    if(class->labels[i] != NULL) {
       if(freeLabel(class->labels[i]) == MS_SUCCESS ) {
         msFree(class->labels[i]);
       }
@@ -4935,7 +4941,7 @@ static int loadOutputFormat(mapObj *map)
     switch(msyylex()) {
       case(EOF):
         msSetError(MS_EOFERR, NULL, "loadOutputFormat()");
-        return(-1);
+        goto load_output_error;
 
       case(END): {
         outputFormatObj *format;
@@ -4945,29 +4951,32 @@ static int loadOutputFormat(mapObj *map)
                      "OUTPUTFORMAT clause lacks DRIVER keyword near (%s):(%d)",
                      "loadOutputFormat()",
                      msyystring_buffer, msyylineno );
-          return -1;
+          goto load_output_error;
         }
 
         format = msCreateDefaultOutputFormat( map, driver, name );
-        msFree( name );
-        name = NULL;
         if( format == NULL ) {
           msSetError(MS_MISCERR,
-                     "OUTPUTFORMAT clause references driver %s, but this driver isn't configured.",
-                     "loadOutputFormat()", driver );
-          return -1;
+                     "OUTPUTFORMAT (%s) clause references driver (%s), but this driver isn't configured.",
+                     "loadOutputFormat()", name, driver );
+          goto load_output_error;
         }
+        msFree( name );
+        name = NULL;
         msFree( driver );
+        driver = NULL;
 
         if( transparent != MS_NOOVERRIDE )
           format->transparent = transparent;
         if( extension != NULL ) {
           msFree( format->extension );
           format->extension = extension;
+          extension = NULL;
         }
         if( mimetype != NULL ) {
           msFree( format->mimetype );
           format->mimetype = mimetype;
+          mimetype = NULL;
         }
         if( imagemode != MS_NOOVERRIDE ) {
 #ifndef USE_GD
@@ -5007,14 +5016,18 @@ static int loadOutputFormat(mapObj *map)
       }
       case(NAME):
         msFree( name );
-        if((name = getToken()) == NULL) return(-1);
+        if((name = getToken()) == NULL) 
+          goto load_output_error;
         break;
       case(MIMETYPE):
-        if(getString(&mimetype) == MS_FAILURE) return(-1);
+        if(getString(&mimetype) == MS_FAILURE)
+          goto load_output_error;
         break;
       case(DRIVER): {
         int s;
-        if((s = getSymbol(2, MS_STRING, TEMPLATE)) == -1) return -1; /* allow the template to be quoted or not in the mapfile */
+        if((s = getSymbol(2, MS_STRING, TEMPLATE)) == -1) /* allow the template to be quoted or not in the mapfile */
+          goto load_output_error;
+        free(driver);
         if(s == MS_STRING)
           driver = msStrdup(msyystring_buffer);
         else
@@ -5022,7 +5035,8 @@ static int loadOutputFormat(mapObj *map)
       }
       break;
       case(EXTENSION):
-        if(getString(&extension) == MS_FAILURE) return(-1);
+        if(getString(&extension) == MS_FAILURE)
+          goto load_output_error;
         if( extension[0] == '.' ) {
           char *temp = msStrdup(extension+1);
           free( extension );
@@ -5030,7 +5044,8 @@ static int loadOutputFormat(mapObj *map)
         }
         break;
       case(FORMATOPTION):
-        if(getString(&value) == MS_FAILURE) return(-1);
+        if(getString(&value) == MS_FAILURE)
+          goto load_output_error;
         if( numformatoptions < MAX_FORMATOPTIONS )
           formatoptions[numformatoptions++] = msStrdup(value);
         free(value);
@@ -5056,20 +5071,28 @@ static int loadOutputFormat(mapObj *map)
           msSetError(MS_IDENTERR,
                      "Parsing error near (%s):(line %d), expected PC256, RGB, RGBA, FEATURE, BYTE, INT16, or FLOAT32 for IMAGEMODE.", "loadOutputFormat()",
                      msyystring_buffer, msyylineno);
-          return -1;
+          goto load_output_error;
         }
         free(value);
         value=NULL;
         break;
       case(TRANSPARENT):
-        if((transparent = getSymbol(2, MS_ON,MS_OFF)) == -1) return(-1);
+        if((transparent = getSymbol(2, MS_ON,MS_OFF)) == -1)
+          goto load_output_error;
         break;
       default:
         msSetError(MS_IDENTERR, "Parsing error near (%s):(line %d)", "loadOutputFormat()",
                    msyystring_buffer, msyylineno);
-        return(-1);
+        goto load_output_error;
     }
   } /* next token */
+load_output_error:
+  msFree( driver );
+  msFree( extension );
+  msFree( mimetype );
+  msFree( name );
+  msFree( value );
+  return -1;
 }
 
 /*
@@ -5464,7 +5487,7 @@ int loadQueryMap(queryMapObj *querymap)
       case(QUERYMAP):
         break; /* for string loads */
       case(COLOR):
-        loadColor(&(querymap->color), NULL);
+        if(loadColor(&(querymap->color), NULL) != MS_SUCCESS) return MS_FAILURE;
         break;
       case(EOF):
         msSetError(MS_EOFERR, NULL, "loadQueryMap()");
@@ -6521,11 +6544,11 @@ mapObj *msLoadMap(char *filename, char *new_mappath)
   }
 
   if (new_mappath)
-    map->mappath = msStrdup(msBuildPath(szPath, szCWDPath, msStrdup(new_mappath)));
+    map->mappath = msStrdup(msBuildPath(szPath, szCWDPath, new_mappath));
   else {
     char *path = msGetPath(filename);
     map->mappath = msStrdup(msBuildPath(szPath, szCWDPath, path));
-    if( path ) free( path );
+    free( path );
   }
 
   msyybasepath = map->mappath; /* for INCLUDEs */
@@ -7100,8 +7123,12 @@ static char **tokenizeMapInternal(char *filename, int *ret_numtokens)
     }
 
     if(tokens[numtokens] == NULL) {
+      int i;
       msSetError(MS_MEMERR, NULL, "msTokenizeMap()");
       fclose(msyyin);
+      for(i=0; i<numtokens; i++)
+        msFree(tokens[i]);
+      msFree(tokens);
       return NULL;
     }
 

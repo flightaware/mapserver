@@ -1,6 +1,8 @@
 build
+build_vagrant
 *.swp
 nbproject
 tags
 tests/map.png
+.vagrant
 

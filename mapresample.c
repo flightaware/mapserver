@@ -671,7 +671,7 @@ msAverageRasterResampler( imageObj *psSrcImage, rasterBufferObj *src_rb,
               alpha = (unsigned char)
                       MAX(0,MIN(255,255*dfAlpha01+0.5));
 
-              RB_SET_PIXEL(dst_rb,nDstX,nDstY,
+              RB_MIX_PIXEL(dst_rb,nDstX,nDstY,
                            red, green, blue, alpha );
             }
 #ifdef USE_GD
@@ -777,8 +777,10 @@ void *msInitProjTransformer( projectionObj *psSrc,
     psPTInfo->bSrcIsGeographic = MS_FALSE;
 
   if( !InvGeoTransform(padfSrcGeoTransform,
-                       psPTInfo->adfInvSrcGeoTransform) )
+                       psPTInfo->adfInvSrcGeoTransform) ) {
+    free(psPTInfo);
     return NULL;
+  }
 
   /* -------------------------------------------------------------------- */
   /*      Record destination image information.                           */
