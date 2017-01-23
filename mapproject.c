@@ -115,7 +115,11 @@ int msProjectPoint(projectionObj *in, projectionObj *out, pointObj *point)
 #endif
 
     if( error || point->x == HUGE_VAL || point->y == HUGE_VAL ) {
+	/* This is generating too much noise in our (FlightAware) logs, so commenting it out
+		Note: the MAPSCRIPT layer was reporting the same error to the log, via
+        trickle down from this call, so this also disables the MAPSCRIPT reported version 
       msSetError(MS_PROJERR,"proj says: %s","msProjectPoint()",pj_strerrno(error));
+	 */
       return MS_FAILURE;
     }
 
